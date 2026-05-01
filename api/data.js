@@ -1,4 +1,4 @@
-// Vercel Serverless Function — /api/data (Plano de Recebimento)
+// Vercel Serverless Function — /api/data (Plano de Recebimento) v2025-05-01
 // Variáveis de ambiente necessárias no Vercel:
 //   GOOGLE_SERVICE_ACCOUNT  — JSON da service account em base64
 //   SHEETS_API_KEY          — API Key (planilhas públicas)
