@@ -11,16 +11,17 @@ const RANGE          = process.env.SHEET_RANGE    || 'Daily!A1:Q3000';
 
 // ─── MAPEAMENTO DE COLUNAS ────────────────────────────
 const COL = {
-  DATE_SOC:  16,  // Q — date_soc        (DD/MM/YY)
-  LT:         1,  // B — lh_trip
-  ETA_PLAN:   2,  // C — eta_panej
-  STATUS:    10,  // K — Status_Real
-  TURNO:      6,  // G — turno_eta
-  DESTINO:    5,  // F — origem
-  PACOTES:   11,  // L — total_orders
-  SACAS:     12,  // M — to_saca
-  SCUTTLE:   13,  // N — to_scuttle
-  PALLET:    14,  // O — to_pallet
+  DATE_SOC:     16,  // Q — date_soc        (DD/MM/YY)
+  LT:            1,  // B — lh_trip
+  ETA_PLAN:      2,  // C — eta_panej
+  STATUS:       10,  // K — Status_Real
+  TURNO_ETA:     6,  // G — turno_eta       (turno planejado)
+  TURNO_DESC:   15,  // P — turno_Descarga  (turno real; fallback p/ turno_eta)
+  DESTINO:       5,  // F — origem
+  PACOTES:      11,  // L — total_orders
+  SACAS:        12,  // M — to_saca
+  SCUTTLE:      13,  // N — to_scuttle
+  PALLET:       14,  // O — to_pallet
 };
 
 const DESCARREGADOS = new Set(['Completed','Finalizado','Descarregado','Unloaded','Descargado']);
@@ -119,7 +120,7 @@ function processRawData(raw) {
     const dateSoc = parseDateSoc(r[COL.DATE_SOC] || '');
     if (!dateSoc || dateSoc.length < 10) return;
 
-    const turno = r[COL.TURNO] || '';
+    const turno = r[COL.TURNO_DESC] || r[COL.TURNO_ETA] || '';
     if (!turno) return;
 
     const sr   = r[COL.STATUS]  || '';
