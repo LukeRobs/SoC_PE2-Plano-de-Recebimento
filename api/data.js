@@ -10,23 +10,20 @@ const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1jVYf9tecelQtvTGumkWb002O_
 const RANGE          = process.env.SHEET_RANGE    || 'Daily!A1:Q3000';
 
 // ─── MAPEAMENTO DE COLUNAS ────────────────────────────
-// Ajuste os índices conforme sua planilha (A=0, B=1, ...)
 const COL = {
-  DATE_SOC:  0,   // A — data operacional (YYYY-MM-DD)
-  LT:        1,   // B — número da viagem / trip
-  VEHICLE:   2,   // C — tipo de veículo
-  ETA_PLAN:  3,   // D — ETA planejado
-  STATUS:    4,   // E — status (Arrived, Unloading, Completed…)
-  TURNO:     5,   // F — turno (T1, T2, T3)
-  DESTINO:   6,   // G — destino / hub de origem
-  DOCA:      7,   // H — doca
-  PACOTES:   8,   // I — total de pacotes
-  SACAS:     9,   // J — total de sacas
-  SCUTTLE:  10,   // K — total de scuttle
-  PALLET:   11,   // L — total de pallet
+  DATE_SOC:  16,  // Q — date_soc        (DD/MM/YY)
+  LT:         1,  // B — lh_trip
+  ETA_PLAN:   2,  // C — eta_panej
+  STATUS:    10,  // K — Status_Real
+  TURNO:      6,  // G — turno_eta
+  DESTINO:    5,  // F — origem
+  PACOTES:   11,  // L — total_orders
+  SACAS:     12,  // M — to_saca
+  SCUTTLE:   13,  // N — to_scuttle
+  PALLET:    14,  // O — to_pallet
 };
 
-const DESCARREGADOS = new Set(['Completed','Finalizado','Descarregado','Unloaded']);
+const DESCARREGADOS = new Set(['Completed','Finalizado','Descarregado','Unloaded','Descargado']);
 // ─────────────────────────────────────────────────────
 
 // ── Service Account JWT ───────────────────────────────
@@ -63,14 +60,39 @@ async function getServiceAccountToken(sa) {
 }
 
 // ── Helpers ───────────────────────────────────────────
+
+// Converte "DD/MM/YY" → "YYYY-MM-DD"
+function parseDateSoc(s) {
+  if (!s) return '';
+  s = s.trim();
+  const parts = s.split('/');
+  if (parts.length === 3) {
+    const [d, m, y] = parts;
+    const year = y.length === 2 ? '20' + y : y;
+    return `${year}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  return s.substring(0, 10);
+}
+
+// Normaliza "DD/MM/YYYY HH:MM:SS" ou "YYYY-MM-DD HH:MM:SS" → ISO
 function normalizeStr(s) {
   if (!s || s.trim() === '' || s === '.0') return null;
   const str = s.trim();
   if (str.includes('/')) {
     const [datePart, timePart = '00:00:00'] = str.split(' ');
-    const [m, d, y] = datePart.split('/');
+    const parts = datePart.split('/');
+    let iso;
+    if (parts[2] && parts[2].length === 4) {
+      // DD/MM/YYYY
+      const [d, m, y] = parts;
+      iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    } else {
+      // MM/DD/YYYY (legado)
+      const [m, d, y] = parts;
+      iso = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    }
     const [hh, mm, ss = '00'] = timePart.split(':');
-    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T${hh.padStart(2,'0')}:${mm}:${ss}`;
+    return `${iso}T${hh.padStart(2,'0')}:${mm}:${ss}`;
   }
   const [datePart, timePart = '00:00:00'] = str.split(' ');
   const [hh, mm, ss = '00'] = timePart.split(':');
@@ -94,32 +116,31 @@ function processRawData(raw) {
   const allRows = [];
 
   rows.forEach(r => {
-    const dateSoc = (r[COL.DATE_SOC] || '').substring(0, 10);
+    const dateSoc = parseDateSoc(r[COL.DATE_SOC] || '');
     if (!dateSoc || dateSoc.length < 10) return;
 
     const turno = r[COL.TURNO] || '';
     if (!turno) return;
 
-    const sr    = r[COL.STATUS]  || '';
-    const dest  = r[COL.DESTINO] || '';
-    const doca  = r[COL.DOCA]    || '';
-    const ep    = extractTime(r[COL.ETA_PLAN]);
-    const pkg   = parseNum(r[COL.PACOTES]);
-    const sac   = parseNum(r[COL.SACAS]);
-    const sct   = parseNum(r[COL.SCUTTLE]);
-    const plt   = parseNum(r[COL.PALLET]);
-    const desc  = DESCARREGADOS.has(sr);
+    const sr   = r[COL.STATUS]  || '';
+    const dest = r[COL.DESTINO] || '';
+    const ep   = extractTime(r[COL.ETA_PLAN]);
+    const pkg  = parseNum(r[COL.PACOTES]);
+    const sac  = parseNum(r[COL.SACAS]);
+    const sct  = parseNum(r[COL.SCUTTLE]);
+    const plt  = parseNum(r[COL.PALLET]);
+    const desc = DESCARREGADOS.has(sr);
 
     allRows.push({
       d: dateSoc,
-      lt:   r[COL.LT]      || '',
-      vt:   r[COL.VEHICLE] || '',
-      ep, sr, tr: turno, dest, doca,
+      lt: r[COL.LT] || '',
+      vt: '',
+      ep, sr, tr: turno, dest, doca: '',
       pkg, sac, sct, plt, desc: desc ? 1 : 0,
     });
 
-    if (!byDate[dateSoc])         byDate[dateSoc] = {};
-    if (!byDate[dateSoc][turno])  byDate[dateSoc][turno] = {
+    if (!byDate[dateSoc])        byDate[dateSoc] = {};
+    if (!byDate[dateSoc][turno]) byDate[dateSoc][turno] = {
       total:0, desc:0, pkg:0, sac:0, sct:0, plt:0,
       statusCounts:{}, destinos:{}, docas:{},
     };
@@ -130,7 +151,6 @@ function processRawData(raw) {
     if (desc) tg.desc++;
     tg.statusCounts[sr] = (tg.statusCounts[sr] || 0) + 1;
     if (dest) tg.destinos[dest] = (tg.destinos[dest] || 0) + 1;
-    if (doca) tg.docas[doca]    = (tg.docas[doca]    || 0) + 1;
   });
 
   const dates = Object.keys(byDate).sort();
