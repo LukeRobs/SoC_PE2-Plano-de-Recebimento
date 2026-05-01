@@ -11,20 +11,19 @@ const RANGE          = process.env.SHEET_RANGE    || 'Daily!A1:Q3000';
 
 // ─── MAPEAMENTO DE COLUNAS ────────────────────────────
 const COL = {
-  DATE_SOC:     16,  // Q — date_soc        (DD/MM/YY)
-  LT:            1,  // B — lh_trip
-  ETA_PLAN:      2,  // C — eta_panej
-  STATUS:       10,  // K — Status_Real
-  TURNO_ETA:     6,  // G — turno_eta       (turno planejado)
-  TURNO_DESC:   15,  // P — turno_Descarga  (turno real; fallback p/ turno_eta)
-  DESTINO:       5,  // F — origem
-  PACOTES:      11,  // L — total_orders
-  SACAS:        12,  // M — to_saca
-  SCUTTLE:      13,  // N — to_scuttle
-  PALLET:       14,  // O — to_pallet
+  DATE_SOC:       16,  // Q — date_soc           (DD/MM/YY)
+  LT:              1,  // B — lh_trip
+  ETA_PLAN:        2,  // C — eta_panej
+  STATUS:         10,  // K — Status_Real
+  TURNO_ETA:       6,  // G — turno_eta           (turno planejado)
+  TURNO_DESC:     15,  // P — turno_Descarga      (turno real da descarga)
+  HORARIO_DESC:    9,  // J — horario_de_descarga (preenchido = descarregado)
+  DESTINO:         5,  // F — origem
+  PACOTES:        11,  // L — total_orders
+  SACAS:          12,  // M — to_saca
+  SCUTTLE:        13,  // N — to_scuttle
+  PALLET:         14,  // O — to_pallet
 };
-
-const DESCARREGADOS = new Set(['Completed','Finalizado','Descarregado','Unloaded','Descargado']);
 // ─────────────────────────────────────────────────────
 
 // ── Service Account JWT ───────────────────────────────
@@ -130,7 +129,8 @@ function processRawData(raw) {
     const sac  = parseNum(r[COL.SACAS]);
     const sct  = parseNum(r[COL.SCUTTLE]);
     const plt  = parseNum(r[COL.PALLET]);
-    const desc = DESCARREGADOS.has(sr);
+    const hdesc = (r[COL.HORARIO_DESC] || '').trim();
+    const desc  = hdesc !== '' && hdesc !== '.0';
 
     allRows.push({
       d: dateSoc,
