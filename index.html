@@ -388,7 +388,7 @@
 <div class="charts-row charts-full">
   <div class="chart-card">
     <h2 id="lineTitle">Pacotes e Viagens por Dia</h2>
-    <div style="height:220px;"><canvas id="cLine"></canvas></div>
+    <div style="height:300px;"><canvas id="cLine"></canvas></div>
   </div>
 </div>
 
@@ -402,7 +402,7 @@
 <div class="charts-row charts-thirds">
   <div class="chart-card">
     <h2 id="barTitle">Viagens por Turno e Status</h2>
-    <div style="height:260px;"><canvas id="cBar"></canvas></div>
+    <div style="height:300px;"><canvas id="cBar"></canvas></div>
   </div>
   <div class="chart-card">
     <h2>Top 10 Destinos</h2>
@@ -518,15 +518,21 @@ const fmtNum   = n  => n.toLocaleString('pt-BR');
 const fmtFixed = n  => n.toLocaleString('pt-BR', { minimumFractionDigits:1, maximumFractionDigits:1 });
 
 const STATUS_COLOR = {
-  'Completed':'tg-ok','Finalizado':'tg-ok','Descarregado':'tg-ok','Unloaded':'tg-ok',
+  'Carregado':'tg-ok','Completed':'tg-ok','Finalizado':'tg-ok','Descarregado':'tg-ok','Unloaded':'tg-ok',
   'Unloading':'tg-warn','Descarregando':'tg-warn',
-  'Arrived':'tg-blue','Chegou':'tg-blue',
-  'Waiting':'tg-purp','Aguardando':'tg-purp',
-  'Cancelled':'tg-gray','Cancelado':'tg-gray',
+  'Aguardando Liberação':'tg-warn','Aguardando Liberacao':'tg-warn',
+  'Aguardando Início':'tg-blue','Aguardando Inicio':'tg-blue','Arrived':'tg-blue',
+  'Assigning':'tg-purp','Waiting':'tg-purp',
+  'Pendente':'tg-gray','Cancelled':'tg-gray','Cancelado':'tg-gray',
 };
 const VT_COLOR = {
   'CARRETA - EXPRESSA':'tg-shopee','CARRETA':'tg-warn','TRUCK':'tg-blue',
 };
+
+function hexToRgba(hex, a) {
+  const [r,g,b] = [hex.slice(1,3),hex.slice(3,5),hex.slice(5,7)].map(h=>parseInt(h,16));
+  return `rgba(${r},${g},${b},${a})`;
+}
 
 function tag(text, cls) { return `<span class="tag ${cls||'tg-gray'}">${text}</span>`; }
 function turnoTag(t)     { return tag(t, `tg-${(t||'').toLowerCase()}`); }
@@ -773,7 +779,13 @@ function rebuildLineChart() {
   const tColor = selTurno==='T1'?'#3b82f6':selTurno==='T2'?'#f59e0b':selTurno==='T3'?'#10b981':'#EE4D2D';
 
   if (_chartLine) _chartLine.destroy();
-  _chartLine = new Chart(document.getElementById('cLine'), {
+  const cLineEl = document.getElementById('cLine');
+  const cLineCtx = cLineEl.getContext('2d');
+  const grad = cLineCtx.createLinearGradient(0, 0, 0, 300);
+  grad.addColorStop(0, hexToRgba(tColor, 0.32));
+  grad.addColorStop(1, hexToRgba(tColor, 0.01));
+
+  _chartLine = new Chart(cLineEl, {
     type: 'line',
     data: {
       labels,
@@ -782,18 +794,26 @@ function rebuildLineChart() {
           label: 'Pacotes',
           data: getPacotes(),
           borderColor: tColor,
-          backgroundColor: tColor.replace(')',', .08)').replace('rgb','rgba'),
-          tension: .4, fill: true, pointRadius: 3,
+          backgroundColor: grad,
+          borderWidth: 2,
+          tension: .4, fill: true,
+          pointRadius: 3, pointHoverRadius: 5,
+          pointBackgroundColor: tColor,
+          pointBorderColor: tc.border,
+          pointBorderWidth: 1.5,
           yAxisID: 'y',
           datalabels: { display: false },
         },
         {
           label: 'Viagens',
           data: getViagens(),
-          borderColor: '#94a3b8',
-          backgroundColor: 'rgba(148,163,184,.07)',
-          tension: .4, fill: false, pointRadius: 3,
-          borderDash: [4, 3],
+          borderColor: '#64748b',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          tension: .4, fill: false,
+          pointRadius: 2.5, pointHoverRadius: 4,
+          pointBackgroundColor: '#64748b',
+          borderDash: [5, 3],
           yAxisID: 'y1',
           datalabels: { display: false },
         }
@@ -801,14 +821,44 @@ function rebuildLineChart() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { color: tc.label, boxWidth: 12, font: { size: 11, family:"'Inter',sans-serif" } } },
+        legend: {
+          labels: {
+            color: tc.label, boxWidth: 12, padding: 16,
+            font: { size: 11, family:"'Inter',sans-serif" },
+            usePointStyle: true, pointStyleWidth: 8,
+          }
+        },
         datalabels: { display: false },
+        tooltip: {
+          backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderWidth: 1,
+          titleColor: tc.label, bodyColor: tc.label,
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y;
+              return ` ${ctx.dataset.label}: ${v.toLocaleString('pt-BR')}`;
+            }
+          }
+        },
       },
       scales: {
-        x:  { ticks: { color: tc.label, font: { size:10 } }, grid: { color: tc.grid } },
-        y:  { position:'left',  ticks: { color: tc.label, font: { size:10 } }, grid: { color: tc.grid }, beginAtZero: true, title: { display:true, text:'Pacotes', color: tc.label, font:{size:9} } },
-        y1: { position:'right', ticks: { color: tc.label, font: { size:10 } }, grid: { display:false }, beginAtZero: true, title: { display:true, text:'Viagens', color: tc.label, font:{size:9} } },
+        x: {
+          ticks: { color: tc.label, font: { size:10 }, maxRotation: 45 },
+          grid: { color: tc.grid },
+        },
+        y: {
+          position:'left',
+          ticks: { color: tc.label, font: { size:10 }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v },
+          grid: { color: tc.grid }, beginAtZero: true,
+          title: { display:true, text:'Pacotes', color: tc.label, font:{size:9} },
+        },
+        y1: {
+          position:'right',
+          ticks: { color: tc.label, font: { size:10 }, stepSize: 1 },
+          grid: { display:false }, beginAtZero: true,
+          title: { display:true, text:'Viagens', color: tc.label, font:{size:9} },
+        },
       }
     }
   });
@@ -817,11 +867,12 @@ function rebuildLineChart() {
 
 // ── STACKED BAR (turno x status) ──
 const STATUS_BAR_COLOR = {
-  'Completed':'#22c55e','Finalizado':'#22c55e','Descarregado':'#22c55e','Unloaded':'#22c55e',
-  'Unloading':'#f59e0b','Descarregando':'#f59e0b',
-  'Arrived':'#3b82f6','Chegou':'#3b82f6',
-  'Waiting':'#818cf8','Aguardando':'#818cf8',
-  'Cancelled':'#6b7280','Cancelado':'#6b7280',
+  'Carregado':'#22c55e','Completed':'#22c55e','Finalizado':'#22c55e','Descarregado':'#22c55e','Unloaded':'#22c55e',
+  'Unloading':'#f97316','Descarregando':'#f97316',
+  'Aguardando Liberação':'#f59e0b','Aguardando Liberacao':'#f59e0b',
+  'Aguardando Início':'#3b82f6','Aguardando Inicio':'#3b82f6','Arrived':'#3b82f6',
+  'Assigning':'#818cf8','Waiting':'#818cf8',
+  'Pendente':'#64748b','Cancelled':'#6b7280','Cancelado':'#6b7280',
 };
 
 function rebuildBarChart() {
@@ -836,15 +887,31 @@ function rebuildBarChart() {
   });
 
   const statuses = [...statusSet];
-  const datasets = statuses.map(status => ({
-    label: status,
-    data: turnos.map(t =>
-      ALL_ROWS.filter(r => r.d === selDate && r.tr === t && r.sr === status).length
-    ),
-    backgroundColor: STATUS_BAR_COLOR[status] || '#64748b',
-    borderRadius: 3,
-    datalabels: { display: false },
-  }));
+  const totals = turnos.map(t =>
+    ALL_ROWS.filter(r => r.d === selDate && r.tr === t && (selTurno === 'ALL' || r.tr === selTurno)).length
+  );
+
+  const datasets = statuses.map((status, si) => {
+    const color = STATUS_BAR_COLOR[status] || '#64748b';
+    return {
+      label: status,
+      data: turnos.map(t =>
+        ALL_ROWS.filter(r => r.d === selDate && r.tr === t && r.sr === status).length
+      ),
+      backgroundColor: hexToRgba(color.startsWith('#') ? color : '#64748b', 0.85),
+      borderColor: color,
+      borderWidth: 0,
+      borderRadius: si === statuses.length - 1 ? { topLeft:4, topRight:4 } : 0,
+      borderSkipped: false,
+      datalabels: {
+        display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+        color: '#fff',
+        font: { size: 10, weight: '700', family:"'Inter',sans-serif" },
+        anchor: 'center', align: 'center',
+        formatter: v => v > 0 ? v : null,
+      },
+    };
+  });
 
   if (_chartBar) _chartBar.destroy();
   _chartBar = new Chart(document.getElementById('cBar'), {
@@ -853,8 +920,14 @@ function rebuildBarChart() {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: tc.label, boxWidth: 10, font: { size: 10, family:"'Inter',sans-serif" } } },
-        datalabels: { display: false },
+        legend: {
+          labels: {
+            color: tc.label, boxWidth: 10, padding: 12,
+            font: { size: 10, family:"'Inter',sans-serif" },
+            usePointStyle: true, pointStyleWidth: 8,
+          }
+        },
+        datalabels: {},
       },
       scales: {
         x: { stacked: true, ticks: { color: tc.label, font:{size:11} }, grid: { display: false } },

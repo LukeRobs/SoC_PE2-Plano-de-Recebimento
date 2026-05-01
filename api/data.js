@@ -130,7 +130,7 @@ function processRawData(raw) {
     const sct  = parseNum(r[COL.SCUTTLE]);
     const plt  = parseNum(r[COL.PALLET]);
     const hdesc = (r[COL.HORARIO_DESC] || '').trim();
-    const desc  = hdesc !== '' && hdesc !== '.0';
+    const desc  = (hdesc !== '' && hdesc !== '.0') || sr === 'Carregado';
 
     allRows.push({
       d: dateSoc,
