@@ -6,8 +6,8 @@
 //   SHEET_RANGE             — Range (padrão: Sheet1!A1:P3000)
 
 const crypto         = require('crypto');
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID || 'CONFIGURE_NO_VERCEL';
-const RANGE          = process.env.SHEET_RANGE    || 'Sheet1!A1:P3000';
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1jVYf9tecelQtvTGumkWb002O_xjkADOPAUAZ5xy9MEQ';
+const RANGE          = process.env.SHEET_RANGE    || 'Daily!A1:Q3000';
 
 // ─── MAPEAMENTO DE COLUNAS ────────────────────────────
 // Ajuste os índices conforme sua planilha (A=0, B=1, ...)
