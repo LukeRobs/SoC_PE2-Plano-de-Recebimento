@@ -454,12 +454,13 @@
         <tr>
           <th>#</th>
           <th>Trip / LT</th>
-          <th>Veículo</th>
           <th>Turno</th>
           <th>ETA Plan</th>
+          <th>ETA Real</th>
+          <th>Unseal</th>
+          <th>Horário Descarga</th>
           <th>Status</th>
           <th>Destino</th>
-          <th>Doca</th>
           <th style="text-align:right;">Pacotes</th>
           <th style="text-align:right;">Sacas</th>
           <th style="text-align:right;">Scuttle</th>
@@ -703,11 +704,18 @@ function renderKPIs() {
   const data = getByDateTurno(selDate, selTurno);
   const total = data ? data.total : 0;
   const desc  = data ? data.desc  : 0;
-  const pkg   = data ? data.pkg   : 0;
-  const sac   = data ? data.sac   : 0;
-  const sct   = data ? data.sct   : 0;
-  const plt   = data ? data.plt   : 0;
-  const spp   = calcSPP(pkg, sac, sct, plt);
+
+  // Pacotes/Sacas/Scuttle/Pallet/SPP contam apenas viagens descarregadas
+  const descRows = ALL_ROWS.filter(r => {
+    if (r.d !== selDate) return false;
+    if (selTurno !== 'ALL' && r.tr !== selTurno) return false;
+    return r.desc === 1;
+  });
+  const pkg = descRows.reduce((s,r) => s + r.pkg, 0);
+  const sac = descRows.reduce((s,r) => s + r.sac, 0);
+  const sct = descRows.reduce((s,r) => s + r.sct, 0);
+  const plt = descRows.reduce((s,r) => s + r.plt, 0);
+  const spp = calcSPP(pkg, sac, sct, plt);
 
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi" style="--kc:var(--brand)">
@@ -1088,20 +1096,23 @@ function renderTable() {
 
   body.innerHTML = rows.map((r,i) => {
     const spp = calcSPP(r.pkg, r.sac, r.sct, r.plt);
+    const mono = 'font-family:var(--font-mono);font-size:.74rem;';
+    const time = v => `<span style="${mono}color:var(--text-2);">${v||'—'}</span>`;
     return `<tr>
       <td style="color:var(--muted);font-size:.66rem;">${i+1}</td>
       <td><code>${r.lt}</code></td>
-      <td>${vtTag(r.vt)}</td>
       <td>${turnoTag(r.tr)}</td>
-      <td style="font-family:var(--font-mono);font-size:.74rem;color:var(--text-2);">${r.ep||'—'}</td>
+      <td>${time(r.ep)}</td>
+      <td>${time(r.er)}</td>
+      <td style="${mono}color:var(--text-2);">${r.unseal||'—'}</td>
+      <td style="${mono}color:var(--text-2);">${r.hd||'—'}</td>
       <td>${srTag(r.sr)}</td>
       <td><strong style="font-size:.74rem;">${r.dest||'—'}</strong></td>
-      <td style="font-size:.74rem;color:var(--text-2);">${r.doca||'—'}</td>
-      <td style="text-align:right;font-family:var(--font-mono);font-size:.74rem;font-weight:600;">${r.pkg>0?fmtNum(r.pkg):'—'}</td>
-      <td style="text-align:right;font-family:var(--font-mono);font-size:.74rem;">${r.sac>0?fmtNum(r.sac):'—'}</td>
-      <td style="text-align:right;font-family:var(--font-mono);font-size:.74rem;">${r.sct>0?fmtNum(r.sct):'—'}</td>
-      <td style="text-align:right;font-family:var(--font-mono);font-size:.74rem;">${r.plt>0?fmtNum(r.plt):'—'}</td>
-      <td style="text-align:right;font-family:var(--font-mono);font-size:.74rem;color:var(--t3);">${spp>0?fmtFixed(spp):'—'}</td>
+      <td style="text-align:right;${mono}font-weight:600;">${r.pkg>0?fmtNum(r.pkg):'—'}</td>
+      <td style="text-align:right;${mono}">${r.sac>0?fmtNum(r.sac):'—'}</td>
+      <td style="text-align:right;${mono}">${r.sct>0?fmtNum(r.sct):'—'}</td>
+      <td style="text-align:right;${mono}">${r.plt>0?fmtNum(r.plt):'—'}</td>
+      <td style="text-align:right;${mono}color:var(--t3);">${spp>0?fmtFixed(spp):'—'}</td>
     </tr>`;
   }).join('');
 }

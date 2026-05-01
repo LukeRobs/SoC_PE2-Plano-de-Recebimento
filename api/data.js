@@ -129,14 +129,16 @@ function processRawData(raw) {
     const sac  = parseNum(r[COL.SACAS]);
     const sct  = parseNum(r[COL.SCUTTLE]);
     const plt  = parseNum(r[COL.PALLET]);
-    const hdesc = (r[COL.HORARIO_DESC] || '').trim();
-    const desc  = (hdesc !== '' && hdesc !== '.0') || sr === 'Carregado';
+    const hdesc  = (r[COL.HORARIO_DESC] || '').trim();
+    const desc   = (hdesc !== '' && hdesc !== '.0') || sr === 'Carregado';
+    const er     = extractTime(r[3]);         // eta_real   (col D)
+    const unseal = (r[8] || '').trim();       // unseal_datetime (col I)
 
     allRows.push({
       d: dateSoc,
       lt: r[COL.LT] || '',
-      vt: '',
-      ep, sr, tr: turno, dest, doca: '',
+      ep, er, unseal, hd: hdesc,
+      sr, tr: turno, dest,
       pkg, sac, sct, plt, desc: desc ? 1 : 0,
     });
 
