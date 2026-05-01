@@ -104,9 +104,19 @@ function extractTime(s) {
   return n ? n.substring(11, 16) : '';
 }
 
-function extractDate(s) {
+// Dia operacional: 06:00–05:59 → horários 00:00–05:59 pertencem ao dia anterior
+function extractOpDate(s) {
   const n = normalizeStr(s);
-  return n ? n.substring(0, 10) : '';
+  if (!n) return '';
+  const date = n.substring(0, 10);
+  const hh   = parseInt(n.substring(11, 13), 10);
+  const mm   = parseInt(n.substring(14, 16), 10) || 0;
+  if (hh * 60 + mm < 360) { // antes das 06:00 → dia anterior
+    const d = new Date(date + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().substring(0, 10);
+  }
+  return date;
 }
 
 function parseNum(s) {
@@ -121,10 +131,10 @@ function processRawData(raw) {
   const allRows = [];
 
   rows.forEach(r => {
-    // Cascata de data: horario_de_descarga → unseal_datetime → eta_real → date_soc
-    const dateSoc = extractDate(r[9]) ||
-                    extractDate(r[8]) ||
-                    extractDate(r[3]) ||
+    // Cascata de data operacional (06:00–05:59): horario_de_descarga → unseal → eta_real → date_soc
+    const dateSoc = extractOpDate(r[9]) ||
+                    extractOpDate(r[8]) ||
+                    extractOpDate(r[3]) ||
                     parseDateSoc(r[COL.DATE_SOC] || '');
     if (!dateSoc || dateSoc.length < 10) return;
 
