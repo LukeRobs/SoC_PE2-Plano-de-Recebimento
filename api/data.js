@@ -104,6 +104,11 @@ function extractTime(s) {
   return n ? n.substring(11, 16) : '';
 }
 
+function extractDate(s) {
+  const n = normalizeStr(s);
+  return n ? n.substring(0, 10) : '';
+}
+
 function parseNum(s) {
   if (!s || s === '.0' || s === '0.0' || s === '0') return 0;
   return Math.round(parseFloat(String(s).trim().replace(/\./g,'').replace(',','.')) || 0);
@@ -116,7 +121,11 @@ function processRawData(raw) {
   const allRows = [];
 
   rows.forEach(r => {
-    const dateSoc = parseDateSoc(r[COL.DATE_SOC] || '');
+    // Cascata de data: horario_de_descarga → unseal_datetime → eta_real → date_soc
+    const dateSoc = extractDate(r[9]) ||
+                    extractDate(r[8]) ||
+                    extractDate(r[3]) ||
+                    parseDateSoc(r[COL.DATE_SOC] || '');
     if (!dateSoc || dateSoc.length < 10) return;
 
     const turno = r[COL.TURNO_DESC] || r[COL.TURNO_ETA] || '';
