@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/data", "dest": "/api/data.js" },
+    { "src": "/(.*)",     "dest": "/index.html"  }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+    }
+  ]
+}
