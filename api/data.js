@@ -163,6 +163,16 @@ module.exports = async function handler(req, res) {
       throw new Error(`Sheets API ${response.status}: ${body.substring(0, 300)}`);
     }
     const raw  = await response.json();
+
+    if (req.query && req.query.debug === '1') {
+      const rows = Array.isArray(raw.values) ? raw.values : [];
+      return res.json({
+        headers:  rows[0]  || [],
+        sample:   rows.slice(1, 4),
+        totalRows: rows.length - 1,
+      });
+    }
+
     const data = processRawData(raw);
     res.json(data);
   } catch (err) {
