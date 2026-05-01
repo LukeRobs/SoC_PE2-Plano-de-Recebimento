@@ -131,11 +131,9 @@ function processRawData(raw) {
   const allRows = [];
 
   rows.forEach(r => {
-    // Cascata de data operacional (06:00–05:59): horario_de_descarga → unseal → eta_real → date_soc
-    const dateSoc = extractOpDate(r[9]) ||
-                    extractOpDate(r[8]) ||
-                    extractOpDate(r[3]) ||
-                    parseDateSoc(r[COL.DATE_SOC] || '');
+    // Se foi descarregado, usa data operacional do horario_de_descarga (shift 06:00)
+    // Caso contrário usa date_soc (planejado)
+    const dateSoc = extractOpDate(r[9]) || parseDateSoc(r[COL.DATE_SOC] || '');
     if (!dateSoc || dateSoc.length < 10) return;
 
     const turno = r[COL.TURNO_DESC] || r[COL.TURNO_ETA] || '';
